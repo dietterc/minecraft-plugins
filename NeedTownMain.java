@@ -13,23 +13,23 @@ import com.palmergames.bukkit.towny.object.Resident;
 import com.palmergames.bukkit.towny.object.Town;
 import com.palmergames.bukkit.towny.object.TownyUniverse;
 
-
-
-
 public class NeedTownMain extends JavaPlugin {
 	
+	//format prefix for the broadcast
 	private String broadcastPrefix = ChatColor.DARK_GRAY + "[" + ChatColor.RED + "Town Ad" +
 			ChatColor.DARK_GRAY + "] " + ChatColor.GOLD;
 
+	//cooldown hashmaps
 	private HashMap<CommandSender,Long> cooldown1;	//needtown
 	private HashMap<CommandSender,Long> cooldown2;	//neednation
 	private HashMap<CommandSender,Long> cooldown3;	//townad
 	private HashMap<CommandSender,Long> cooldown4;	//nationad
-	private static final int COOLDOWN_TIME_MS = 600000;
+	
+	private static final int COOLDOWN_TIME_MS = 600000; //10 minutes
 	
 	 @Override
 	 public void onEnable() {
-	       
+	     //create new empty hashmaps
 		 cooldown1 = new HashMap<>();	
 		 cooldown2 = new HashMap<>();	
 		 cooldown3 = new HashMap<>();	
@@ -39,7 +39,8 @@ public class NeedTownMain extends JavaPlugin {
 	   
 	 @Override
 	 public void onDisable() {
-	       
+	     
+		 //clear all hashmaps
 		 cooldown1.clear();
 		 cooldown2.clear();
 		 cooldown3.clear();
@@ -49,23 +50,23 @@ public class NeedTownMain extends JavaPlugin {
 	 
 	 public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 		 
-		 String commandName = command.getName().toLowerCase();
+		 String commandName = command.getName().toLowerCase(); //ignore caps for the command
 		 boolean retVal = false;
-		 Resident resident;
+		 Resident resident;		
 		 
 		 try {
-			resident = TownyUniverse.getDataSource().getResident(sender.getName());
+			resident = TownyUniverse.getDataSource().getResident(sender.getName()); //get the resident from towny
 		} catch (NotRegisteredException e) {
 			resident = null;
 		}
-
 		 
-		 
+		 //check what command was sent, call the appropriate method 
+		 //sender and resident are the same person, both are sent each command so its easier
 		 if(resident!=null) {
 			 switch (commandName){
 		 		case "needtown":
 		 			retVal = true;
-		 			needtown(sender, resident); //sender and resident are the same person, both are sent so its easier 
+		 			needtown(sender, resident); 
 		 		break;
 			
 		 		case "neednation":
@@ -87,27 +88,38 @@ public class NeedTownMain extends JavaPlugin {
 		 
 		 return retVal;
 	 }
-	
+	 
+	/**
+	 * needtown
+	 * 
+	 * Broadcasts that the command sender is looking for a town only if they dont
+	 *  have a town already
+	 */
 	 private void needtown(CommandSender sender, Resident resident) {
 		 
 		 if(!resident.hasTown()) {
-			 
 			 if(checkCooldown(cooldown1,sender)) {
 				 org.bukkit.Bukkit.getServer().broadcastMessage(broadcastPrefix + resident.getName() 
 			 		+ " is looking for a town! Invite them now!");
 			 }
-			 
 		 }
 		 else {
 		 	sender.sendMessage(ChatColor.GRAY + "You cannot use this command if you are already in a town.");
 		 }
 	 }
 	 
+	 /**
+	  * neednation
+	  * 
+	  * Broadcast that the town of the command sender is looking for a nation
+	  * sender must be in a town and a mayor or assistant
+	  * town cannot already be in a nation
+	  */
 	 private void neednation(CommandSender sender, Resident resident) {
 		 
 		 if(resident.hasTown()) {
-			 
 		 	Town town;
+		 	
 		 	try {
 		 		town = resident.getTown(); //get the town
 		 	} catch (NotRegisteredException e) {
@@ -134,17 +146,23 @@ public class NeedTownMain extends JavaPlugin {
 		} 
 	 }
 	 
+	 /**
+	  * townad
+	  * 
+	  * Broadcasts that the command senders town is looking for members
+	  * sender must be a mayor or assistant
+	  */
 	 private void townad(CommandSender sender, Resident resident) {
 		 
 		 if(resident.hasTown()) {
-			 
 		 	Town town;
+		 	
 		 	try {
 		 		town = resident.getTown(); //get the town
 		 	} catch (NotRegisteredException e) {
 		 		town = null;
 		 	}	
-		
+		 	
 		 	if(town.hasAssistant(resident) || resident.isMayor()) {
 		 		if(checkCooldown(cooldown3,sender)) {
 		 			org.bukkit.Bukkit.getServer().broadcastMessage(broadcastPrefix + town.getName() 
@@ -160,6 +178,13 @@ public class NeedTownMain extends JavaPlugin {
 		 } 
 	 }
 	 
+	 /**
+	  * nationad
+	  * 
+	  * broadcasts that the commandsender's nation is looking for towns 
+	  * must be leader or assistant of the nation
+	  * can only be run if they have a nation
+	  */
 	 private void nationad(CommandSender sender, Resident resident) {
 		 
 		 if(resident.hasNation()) {
@@ -186,10 +211,22 @@ public class NeedTownMain extends JavaPlugin {
 		}
 	 }
 	 
+	 /**
+	  * checkCooldown
+	  * 
+	  * Given a hashmap and a commandsender, checks whether or not enough
+	  * 	time has passed before they can run a command again
+	  * 
+	  * The hashmap stores the time that the command was last run at, at the location of 
+	  * 	commandsender(hashed). To check the cooldown, I compare the time stored with 
+	  * 	the current time whenever the command is run.
+	  *  
+	  */
 	 private boolean checkCooldown(HashMap<CommandSender,Long> cooldown, CommandSender sender) {
 		 boolean retVal = false;
 		 
-		 if(cooldown.containsKey(sender)) {
+		//check if they are in the hashmap, if they arent, then there is no cooldown and they can run the command
+		 if(cooldown.containsKey(sender)) { 
 			 
 			 long timeDiff = System.currentTimeMillis() - cooldown.get(sender);
 			 if(timeDiff >= COOLDOWN_TIME_MS) {
@@ -210,29 +247,3 @@ public class NeedTownMain extends JavaPlugin {
 	 }
 	 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
